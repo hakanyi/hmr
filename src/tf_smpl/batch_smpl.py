@@ -16,6 +16,7 @@ import pickle as pickle
 import tensorflow as tf
 from .batch_lbs import batch_rodrigues, batch_global_rigid_transformation
 
+import pdb
 
 # There are chumpy variables so convert them to numpy.
 def undo_chumpy(x):
@@ -29,7 +30,7 @@ class SMPL(object):
         """
         # -- Load SMPL params --
         with open(pkl_path, 'rb') as f:
-            dd = pickle.load(f, encoding="latin-1") 
+            dd = pickle.load(f) #encoding="latin-1")
         # Mean template vertices
         self.v_template = tf.Variable(
             undo_chumpy(dd['v_template']),
@@ -37,7 +38,7 @@ class SMPL(object):
             dtype=dtype,
             trainable=False)
         # Size of mesh [Number of vertices, 3]
-        self.size = [self.v_template.shape[0].value, 3]
+        self.size = [self.v_template.shape[0], 3]
         self.num_betas = dd['shapedirs'].shape[-1]
         # Shape blend shape basis: 6980 x 3 x 10
         # reshaped to 6980*30 x 10, transposed to 10x6980*3
@@ -103,6 +104,8 @@ class SMPL(object):
         """
 
         with tf.name_scope(name, "smpl_main", [beta, theta]):
+            print(beta)
+            print(beta.shape)
             num_batch = beta.shape[0].value
 
             # 1. Add shape blend shapes
@@ -143,7 +146,7 @@ class SMPL(object):
                 tf.matmul(W, tf.reshape(A, [num_batch, 24, 16])),
                 [num_batch, -1, 4, 4])
             v_posed_homo = tf.concat(
-                [v_posed, tf.ones([num_batch, v_posed.shape[1], 1])], 2)
+                [v_posed, tf.ones([num_batch, v_posed.shape[1].value, 1])], 2)
             v_homo = tf.matmul(T, tf.expand_dims(v_posed_homo, -1))
 
             verts = v_homo[:, :, :3, 0]

@@ -22,12 +22,11 @@ def visualize(proc_param, renderer, joints, verts, cam, img_size=(230,230)):
     """
     Renders the result in original image coordinate frame.
     """
-    cam_for_render, vert_shifted, joints_orig = vis_util.get_original(
-        proc_param, verts, cam, joints, img_size=img_size)
-
+    cam_for_render, vert_shifted, joints_orig = vis_util.get_original(proc_param, verts, cam, joints, img_size=img_size)
     # Render results
+    # rend_img = renderer(verts, cam=cam, img_size=img_size)
     rend_img = renderer(vert_shifted, cam=cam_for_render, img_size=img_size)
-    rend_img = renderer.rotated(vert_shifted, 90, cam=cam_for_render, img_size=img_size)
+    # rend_img = renderer.rotated(vert_shifted, 90, cam=cam_for_render, img_size=img_size)
 
     fig = plt.figure(1)
     plt.imshow(rend_img)
@@ -47,7 +46,8 @@ smpl = SMPL(smpl_model_path)
 renderer = vis_util.SMPLRenderer(face_path=smpl_face_path)
 
 # define camera, position and shape parameters
-cam = np.load('latents/cam'+str(args.num)+'.npy').flatten()
+# cam = np.load('latents/cam'+str(args.num)+'.npy').flatten()
+cam = np.array([1.,0,0], np.float32)
 pose = np.load('latents/pose'+str(args.num)+'.npy')
 shape = np.load('latents/shape'+str(args.num)+'.npy')
 cam_tf = tf.Variable(cam)

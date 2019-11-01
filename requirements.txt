@@ -1,11 +1,13 @@
 # python requirements
+tensorflow-gpu==1.12
 pip>=9.0
 scipy
 numpy
-opendr==0.77
+opendr==0.77  # installed manually
 matplotlib
 scikit-image
 deepdish>=0.3
 opencv-python
 absl-py
 ipdb
+pandas

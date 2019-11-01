@@ -22,9 +22,15 @@ from __future__ import print_function
 import sys
 from absl import flags
 import numpy as np
+import os
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
 
 import skimage.io as io
 import tensorflow as tf
+
+import pdb
 
 from src.util import renderer as vis_util
 from src.util import image as img_util
@@ -38,7 +44,12 @@ flags.DEFINE_string(
     'If specified, uses the openpose output to crop the image.')
 
 
-def visualize(img, proc_param, joints, verts, cam):
+def make_path(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+
+def visualize(img, proc_param, renderer, joints, verts, cam):
     """
     Renders the result in original image coordinate frame.
     """
@@ -56,9 +67,8 @@ def visualize(img, proc_param, joints, verts, cam):
     rend_img_vp2 = renderer.rotated(
         vert_shifted, -60, cam=cam_for_render, img_size=img.shape[:2])
 
-    import matplotlib.pyplot as plt
     # plt.ion()
-    plt.figure(1)
+    fig = plt.figure(1)
     plt.clf()
     plt.subplot(231)
     plt.imshow(img)
@@ -88,17 +98,18 @@ def visualize(img, proc_param, joints, verts, cam):
     plt.show()
     # import ipdb
     # ipdb.set_trace()
+    return fig
 
 
-def preprocess_image(img_path, json_path=None):
+def preprocess_image(img_path, img_size, json_path=None):
     img = io.imread(img_path)
     if img.shape[2] == 4:
         img = img[:, :, :3]
 
     if json_path is None:
-        if np.max(img.shape[:2]) != config.img_size:
-            print('Resizing so the max image size is %d..' % config.img_size)
-            scale = (float(config.img_size) / np.max(img.shape[:2]))
+        if np.max(img.shape[:2]) != img_size:
+            print('Resizing so the max image size is %d..' % img_size)
+            scale = (float(img_size) / np.max(img.shape[:2]))
         else:
             scale = 1.
         center = np.round(np.array(img.shape[:2]) / 2).astype(int)
@@ -108,19 +119,34 @@ def preprocess_image(img_path, json_path=None):
         scale, center = op_util.get_bbox(json_path)
 
     crop, proc_param = img_util.scale_and_crop(img, scale, center,
-                                               config.img_size)
-
+                                               img_size)
+    print(proc_param)
     # Normalize image to [-1, 1]
     crop = 2 * ((crop / 255.) - 0.5)
 
     return crop, proc_param, img
 
 
-def main(img_path, json_path=None):
-    sess = tf.Session()
-    model = RunModel(config, sess=sess)
+def main(img_path, model_type='ResNet50-HMR', json_path=None):
+    config = flags.FLAGS
+    config(sys.argv)
 
-    input_img, proc_param, img = preprocess_image(img_path, json_path)
+    config.load_path = src.config.FULL_PRETRAINED_MODEL
+    if model_type == 'ResNet50-HMR':
+        second_load_path = None
+    elif model_type == 'ResNet50-ImageNet':
+        second_load_path = src.config.RESNET_IMAGENET_PRETRAINED_MODEL
+    else:
+        print('Error. Model type {} is currently not implemented'.format(model_type))
+
+    config.batch_size = 1
+
+    tf.reset_default_graph()
+    sess = tf.Session()
+    model = RunModel(config, second_load_path, sess=sess)
+
+    img_name = str.split(os.path.basename(img_path),'.')[0]
+    input_img, proc_param, img = preprocess_image(img_path, config.img_size, json_path)
     # Add batch dimension: 1 x D x D x 3
     input_img = np.expand_dims(input_img, 0)
 
@@ -128,20 +154,28 @@ def main(img_path, json_path=None):
     # where camera is 3D [s, tx, ty]
     # pose is 72D vector holding the rotation of 24 joints of SMPL in axis angle format
     # shape is 10D shape coefficients of SMPL
-    joints, verts, cams, joints3d, theta = model.predict(
+    joints, verts, cams, joints3d, theta, layer_activations = model.predict(
         input_img, get_theta=True)
 
-    visualize(img, proc_param, joints[0], verts[0], cams[0])
-
-
-if __name__ == '__main__':
-    config = flags.FLAGS
-    config(sys.argv)
-    # Using pre-trained model, change this to use your own.
-    config.load_path = src.config.PRETRAINED_MODEL
-
-    config.batch_size = 1
-
     renderer = vis_util.SMPLRenderer(face_path=config.smpl_face_path)
+    pdb.set_trace()
+    fig = visualize(img, proc_param, renderer, joints[0], verts[0], cams[0])
+    save_dir = 'reconstructions-'+model_type
+    make_path(save_dir)
+    fig.savefig(os.path.join(save_dir, img_name+'.png'))
 
-    main(config.img_path, config.json_path)
+    return layer_activations
+
+# if __name__ == '__main__'# :
+    # config = flags.FLAGS
+    # pdb.set_trace()
+    # config(sys.argv)
+    # # Using pre-trained model, change this to use your own.
+    # config.load_path = src.config.PRETRAINED_MODEL
+
+    # config.batch_size = 1
+
+    # renderer = vis_util.SMPLRenderer(face_path=config.smpl_face_path)
+
+    # main(config.img_path,
+         # config.json_path)

@@ -27,11 +27,12 @@ if not osp.exists(model_dir):
 SMPL_MODEL_PATH = osp.join(model_dir, 'neutral_smpl_with_cocoplus_reg.pkl')
 SMPL_FACE_PATH = osp.join(curr_path, '../src/tf_smpl', 'smpl_faces.npy')
 
-# Default pred-trained model path for the demo.
-PRETRAINED_MODEL = osp.join(model_dir, 'model.ckpt-667589')
+# Default pre-trained model path for the demo.
+FULL_PRETRAINED_MODEL = osp.join(model_dir, 'HMR', 'model.ckpt-667589')
+RESNET_IMAGENET_PRETRAINED_MODEL = osp.join(model_dir, 'ImageNet', 'resnet_v2_50.ckpt')
 
 flags.DEFINE_string('smpl_model_path', SMPL_MODEL_PATH,
-                    'path to the neurtral smpl model')
+                    'path to the neutral smpl model')
 flags.DEFINE_string('smpl_face_path', SMPL_FACE_PATH,
                     'path to smpl mesh faces (for easy rendering)')
 flags.DEFINE_string('load_path', None, 'path to trained model')

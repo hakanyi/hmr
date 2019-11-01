@@ -48,7 +48,7 @@ def Encoder_resnet(x, is_training=True, weight_decay=0.001, reuse=False):
                 scope='resnet_v2_50')
             net = tf.squeeze(net, axis=[1, 2])
     variables = tf.contrib.framework.get_variables('resnet_v2_50')
-    return net, variables
+    return net, variables, end_points
 
 
 def Encoder_fc3_dropout(x,
